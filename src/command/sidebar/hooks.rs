@@ -44,7 +44,7 @@ pub(super) fn install_hooks() -> Result<()> {
     ];
 
     for (hook, cmd) in hooks {
-        Cmd::new("tmux")
+        Cmd::new(crate::multiplexer::util::tmux_binary())
             .args(&["set-hook", "-g", hook, cmd])
             .run()?;
     }
@@ -69,7 +69,9 @@ fn tmux_double_quote(value: &str) -> String {
 /// Remove tmux hooks.
 pub(super) fn remove_hooks() {
     for hook in HOOK_NAMES {
-        let _ = Cmd::new("tmux").args(&["set-hook", "-gu", hook]).run();
+        let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
+            .args(&["set-hook", "-gu", hook])
+            .run();
     }
 }
 

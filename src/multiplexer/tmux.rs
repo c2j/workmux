@@ -219,7 +219,7 @@ impl TmuxBackend {
 
     /// Run a tmux command, returning an error with context on failure.
     fn tmux_cmd(&self, args: &[&str]) -> Result<()> {
-        Cmd::new("tmux")
+        Cmd::new(crate::multiplexer::util::tmux_binary())
             .args(args)
             .run()
             .with_context(|| format!("tmux command failed: {:?}", args))?;
@@ -228,7 +228,7 @@ impl TmuxBackend {
 
     /// Run a tmux command and capture stdout.
     fn tmux_query(&self, args: &[&str]) -> Result<String> {
-        Cmd::new("tmux")
+        Cmd::new(crate::multiplexer::util::tmux_binary())
             .args(args)
             .run_and_capture_stdout()
             .with_context(|| format!("tmux query failed: {:?}", args))
@@ -332,7 +332,7 @@ impl TmuxBackend {
         // Uses run() instead of tmux_query()/run_and_capture_stdout() because the latter
         // calls .trim() which strips meaningful whitespace from format strings (e.g.,
         // padding spaces in tmux themes). We only strip trailing newlines from command output.
-        let window_format = Cmd::new("tmux")
+        let window_format = Cmd::new(crate::multiplexer::util::tmux_binary())
             .args(&["show-option", "-wv", "-t", pane, option])
             .run()
             .ok()
@@ -342,7 +342,7 @@ impl TmuxBackend {
 
         let current = match window_format {
             Some(fmt) => fmt,
-            None => Cmd::new("tmux")
+            None => Cmd::new(crate::multiplexer::util::tmux_binary())
                 .args(&["show-option", "-gv", option])
                 .run()
                 .ok()
@@ -384,7 +384,7 @@ impl TmuxBackend {
             .to_str()
             .ok_or_else(|| anyhow!("Working directory path contains non-UTF8 characters"))?;
 
-        let mut cmd = Cmd::new("tmux").args(&[
+        let mut cmd = Cmd::new(crate::multiplexer::util::tmux_binary()).args(&[
             "split-window",
             split_arg,
             "-t",
@@ -441,7 +441,9 @@ impl Multiplexer for TmuxBackend {
     // === Server/Session ===
 
     fn is_running(&self) -> Result<bool> {
-        Cmd::new("tmux").arg("has-session").run_as_check()
+        Cmd::new(crate::multiplexer::util::tmux_binary())
+            .arg("has-session")
+            .run_as_check()
     }
 
     fn current_pane_id(&self) -> Option<String> {
@@ -481,7 +483,8 @@ impl Multiplexer for TmuxBackend {
             .to_str()
             .ok_or_else(|| anyhow!("Working directory path contains non-UTF8 characters"))?;
 
-        let mut cmd = Cmd::new("tmux").args(&["new-window", "-d", "-a"]);
+        let mut cmd =
+            Cmd::new(crate::multiplexer::util::tmux_binary()).args(&["new-window", "-d", "-a"]);
 
         // With no explicit target, tmux inserts after the current window.
         if let Some(target) = params.after_window {
@@ -517,7 +520,7 @@ impl Multiplexer for TmuxBackend {
         // -s: session name
         // -c: start directory
         // -P -F: print the pane ID of the initial window
-        let mut cmd = Cmd::new("tmux").args(&[
+        let mut cmd = Cmd::new(crate::multiplexer::util::tmux_binary()).args(&[
             "new-session",
             "-d",
             "-s",
@@ -562,8 +565,14 @@ impl Multiplexer for TmuxBackend {
         // Target the specific session with trailing colon (creates window at next index)
         let target = format!("{}:", params.session_name);
 
-        let mut cmd =
-            Cmd::new("tmux").args(&["new-window", "-d", "-t", &target, "-c", working_dir_str]);
+        let mut cmd = Cmd::new(crate::multiplexer::util::tmux_binary()).args(&[
+            "new-window",
+            "-d",
+            "-t",
+            &target,
+            "-c",
+            working_dir_str,
+        ]);
 
         // Optionally name the window
         if let Some(window_name) = params.name {
@@ -660,7 +669,7 @@ impl Multiplexer for TmuxBackend {
 
     fn session_exists(&self, full_name: &str) -> Result<bool> {
         // has-session returns 0 if session exists, 1 if not
-        Cmd::new("tmux")
+        Cmd::new(crate::multiplexer::util::tmux_binary())
             .args(&["has-session", "-t", full_name])
             .run_as_check()
     }
@@ -995,8 +1004,14 @@ impl Multiplexer for TmuxBackend {
             .to_str()
             .ok_or_else(|| anyhow!("Working directory path contains non-UTF8 characters"))?;
 
-        let mut command =
-            Cmd::new("tmux").args(&["respawn-pane", "-t", pane_id, "-c", working_dir_str, "-k"]);
+        let mut command = Cmd::new(crate::multiplexer::util::tmux_binary()).args(&[
+            "respawn-pane",
+            "-t",
+            pane_id,
+            "-c",
+            working_dir_str,
+            "-k",
+        ]);
 
         // Wrap in sh -c "..." to ensure POSIX evaluation even when tmux's
         // default-shell is a non-POSIX shell like nushell.
@@ -1035,7 +1050,7 @@ impl Multiplexer for TmuxBackend {
     fn paste_text(&self, pane_id: &str, content: &str) -> Result<()> {
         use std::io::Write;
 
-        let mut child = std::process::Command::new("tmux")
+        let mut child = std::process::Command::new(crate::multiplexer::util::tmux_binary())
             .args(["load-buffer", "-"])
             .stdin(std::process::Stdio::piped())
             .spawn()

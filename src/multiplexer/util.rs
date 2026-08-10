@@ -16,6 +16,28 @@ use super::PaneHandshake;
 use super::handshake::UnixPipeHandshake;
 use super::types::LivePaneInfo;
 
+use std::sync::LazyLock;
+
+/// Returns the path to the tmux binary.
+///
+/// Prefers a `tmux` binary located next to the running `workmux` executable
+/// (bundled release layout). Falls back to `"tmux"` (PATH lookup) for
+/// development workflows and systems with tmux installed separately.
+pub fn tmux_binary() -> &'static str {
+    static TMUX_PATH: LazyLock<String> = LazyLock::new(|| {
+        if let Ok(exe) = std::env::current_exe() {
+            if let Some(dir) = exe.parent() {
+                let bundled = dir.join("tmux");
+                if bundled.exists() {
+                    return bundled.to_string_lossy().to_string();
+                }
+            }
+        }
+        "tmux".to_string()
+    });
+    TMUX_PATH.as_str()
+}
+
 /// Helper function to add prefix to window name.
 ///
 /// Used by all backends to construct full window names from prefix and base name.

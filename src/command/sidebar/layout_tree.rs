@@ -406,7 +406,7 @@ pub(super) fn reflow_after_sidebar_add_to_window_extent(
     content_size: u16,
     window_extent: Option<u16>,
 ) {
-    let output = match Cmd::new("tmux")
+    let output = match Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&[
             "display-message",
             "-t",
@@ -539,7 +539,7 @@ pub(super) fn reflow_after_sidebar_add_to_window_extent(
         "reflow: applying"
     );
 
-    let _ = Cmd::new("tmux")
+    let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["select-layout", "-t", window_id, &new_layout])
         .run();
 }
@@ -593,7 +593,7 @@ pub(super) fn layout_after_sidebar_remove(
     sidebar_pane_id: &str,
     position: SidebarPosition,
 ) -> Option<String> {
-    let layout_str = Cmd::new("tmux")
+    let layout_str = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["display-message", "-t", window_id, "-p", "#{window_layout}"])
         .run_and_capture_stdout()
         .ok()?;

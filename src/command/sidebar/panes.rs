@@ -14,7 +14,7 @@ use super::layout_tree::{layout_after_sidebar_remove, reflow_after_sidebar_add};
 
 /// Check if a window already has a sidebar pane.
 pub(super) fn find_sidebar_in_window(window_id: &str) -> Result<bool> {
-    let output = Cmd::new("tmux")
+    let output = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["list-panes", "-t", window_id, "-F", "#{@workmux_role}"])
         .run_and_capture_stdout()?;
 
@@ -42,7 +42,7 @@ pub(super) fn create_sidebar_in_window(
     debug!(window_id, position = ?position, size, "create_sidebar_in_window: creating");
 
     // Get the first pane in the window as split target
-    let target_pane = Cmd::new("tmux")
+    let target_pane = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["list-panes", "-t", window_id, "-F", "#{pane_id}"])
         .run_and_capture_stdout()?;
     let target_pane = target_pane.lines().next().map(|l| l.trim()).unwrap_or("");
@@ -55,7 +55,7 @@ pub(super) fn create_sidebar_in_window(
         SidebarPosition::Top => "-vbf",
     };
 
-    let new_pane_id = Cmd::new("tmux")
+    let new_pane_id = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&[
             "split-window",
             split_flag,
@@ -74,7 +74,7 @@ pub(super) fn create_sidebar_in_window(
         .trim()
         .to_string();
 
-    Cmd::new("tmux")
+    Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&[
             "set-option",
             "-p",
@@ -115,12 +115,14 @@ fn list_windows_for_sidebars(
 ) -> Result<String> {
     let format = sidebar_window_extent_format(position);
     match scope {
-        SidebarWindowScope::All => Cmd::new("tmux")
+        SidebarWindowScope::All => Cmd::new(crate::multiplexer::util::tmux_binary())
             .args(&["list-windows", "-a", "-F", format])
             .run_and_capture_stdout(),
-        SidebarWindowScope::Session(session_id) => Cmd::new("tmux")
-            .args(&["list-windows", "-t", session_id, "-F", format])
-            .run_and_capture_stdout(),
+        SidebarWindowScope::Session(session_id) => {
+            Cmd::new(crate::multiplexer::util::tmux_binary())
+                .args(&["list-windows", "-t", session_id, "-F", format])
+                .run_and_capture_stdout()
+        }
     }
 }
 
@@ -179,11 +181,13 @@ fn compute_sidebar_layouts(
 
 fn kill_panes_and_apply_layouts(sidebars: &[(String, String)], layouts: &[Option<String>]) {
     for (_, pane_id) in sidebars {
-        let _ = Cmd::new("tmux").args(&["kill-pane", "-t", pane_id]).run();
+        let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
+            .args(&["kill-pane", "-t", pane_id])
+            .run();
     }
     for (i, (window_id, _)) in sidebars.iter().enumerate() {
         if let Some(layout) = &layouts[i] {
-            let _ = Cmd::new("tmux")
+            let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
                 .args(&["select-layout", "-t", window_id, layout])
                 .run();
         }
@@ -195,7 +199,7 @@ fn kill_panes_and_apply_layouts(sidebars: &[(String, String)], layouts: &[Option
 pub(super) fn kill_sidebars_in_session(session_id: &str) {
     let config = crate::config::Config::load(None).unwrap_or_default();
     let position = super::read_sidebar_position(&config);
-    let output = Cmd::new("tmux")
+    let output = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&[
             "list-panes",
             "-a",
@@ -224,7 +228,7 @@ pub(super) fn kill_sidebars_in_session(session_id: &str) {
 
 /// Find all sidebar panes across all windows. Returns (window_id, pane_id) pairs.
 pub(super) fn list_sidebar_panes() -> Vec<(String, String)> {
-    let output = Cmd::new("tmux")
+    let output = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&[
             "list-panes",
             "-a",
@@ -282,7 +286,7 @@ pub(super) fn shutdown_all_sidebars(identity: &HostIdentity) {
     let sidebars = match &scope {
         super::SidebarScope::Sessions(ids) => {
             let our_sid = our_session_id;
-            let output = Cmd::new("tmux")
+            let output = Cmd::new(crate::multiplexer::util::tmux_binary())
                 .args(&[
                     "list-panes",
                     "-a",
@@ -352,7 +356,9 @@ pub(super) fn shutdown_all_sidebars(identity: &HostIdentity) {
     // Defer our own window's layout reflow until after our pane closes
     if let Some(layout) = our_layout {
         let cmd = format!("sleep 0.1; tmux select-layout -t {our_window} '{layout}' 2>/dev/null");
-        let _ = Cmd::new("tmux").args(&["run-shell", "-b", &cmd]).run();
+        let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
+            .args(&["run-shell", "-b", &cmd])
+            .run();
     }
 }
 

@@ -44,7 +44,7 @@ struct TmuxState {
 /// Query all sidebar-relevant tmux state in a single command.
 fn query_tmux_state() -> TmuxState {
     let format = "#{pane_id}\t#{session_name}\t#{window_id}\t#{@workmux_pane_status}\t#{window_active}\t#{session_attached}\t#{pane_active}\t#{window_index}";
-    let output = Cmd::new("tmux")
+    let output = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["list-panes", "-a", "-F", format])
         .run_and_capture_stdout()
         .unwrap_or_default();
@@ -208,7 +208,7 @@ impl SocketServer {
 /// Read the sidebar layout mode from tmux global, falling back to settings.json, then config.
 fn read_sidebar_layout_mode(config: &Config) -> Option<SidebarLayoutMode> {
     // Check tmux global first (set by toggle_layout_mode during this session)
-    if let Ok(output) = Cmd::new("tmux")
+    if let Ok(output) = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["show-option", "-gqv", "@workmux_sidebar_layout"])
         .run_and_capture_stdout()
     {
@@ -242,7 +242,7 @@ fn read_sidebar_layout_mode(config: &Config) -> Option<SidebarLayoutMode> {
 
 /// Read the sidebar filter mode from tmux global, falling back to settings.json.
 fn read_sidebar_filter_mode() -> SidebarFilterMode {
-    if let Ok(output) = Cmd::new("tmux")
+    if let Ok(output) = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["show-option", "-gqv", "@workmux_sidebar_filter"])
         .run_and_capture_stdout()
     {
@@ -265,7 +265,7 @@ fn read_sidebar_filter_mode() -> SidebarFilterMode {
 
 /// Read pane IDs manually marked as sleeping from the tmux global option.
 fn read_sleeping_panes() -> HashSet<String> {
-    Cmd::new("tmux")
+    Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["show-option", "-gqv", "@workmux_sleeping_panes"])
         .run_and_capture_stdout()
         .ok()
@@ -1600,7 +1600,7 @@ pub fn run() -> Result<()> {
         spawn_github_worker(term.clone(), dirty_flag.clone(), wake_tx);
 
     // Store PID so toggle-off can kill us and hooks can signal us
-    Cmd::new("tmux")
+    Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&[
             "set-option",
             "-g",
@@ -1782,11 +1782,11 @@ pub fn run() -> Result<()> {
                 .join(" ");
             if agent_list != last_agent_list {
                 if !agent_list.is_empty() {
-                    let _ = Cmd::new("tmux")
+                    let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
                         .args(&["set-option", "-g", "@workmux_sidebar_agents", &agent_list])
                         .run();
                 } else {
-                    let _ = Cmd::new("tmux")
+                    let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
                         .args(&["set-option", "-gu", "@workmux_sidebar_agents"])
                         .run();
                 }
@@ -1830,16 +1830,16 @@ pub fn run() -> Result<()> {
     if let Ok(store) = StateStore::new() {
         store.delete_runtime(&backend_name, &instance_id);
     }
-    let _ = Cmd::new("tmux")
+    let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["set-option", "-gu", "@workmux_sidebar_daemon_pid"])
         .run();
-    let _ = Cmd::new("tmux")
+    let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["set-option", "-gu", "@workmux_sidebar_agents"])
         .run();
-    let _ = Cmd::new("tmux")
+    let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["set-option", "-gu", "@workmux_sleeping_panes"])
         .run();
-    let _ = Cmd::new("tmux")
+    let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["set-option", "-gu", "@workmux_sidebar_scope"])
         .run();
     Ok(())

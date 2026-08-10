@@ -55,7 +55,7 @@ fn wait_for_socket(instance_id: &str, timeout: Duration) -> bool {
 
 /// Read the daemon PID from the tmux global option.
 fn daemon_pid() -> Option<String> {
-    Cmd::new("tmux")
+    Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["show-option", "-gqv", "@workmux_sidebar_daemon_pid"])
         .run_and_capture_stdout()
         .ok()
@@ -71,7 +71,7 @@ pub(super) fn kill_daemon() {
             .stderr(std::process::Stdio::null())
             .status();
     }
-    let _ = Cmd::new("tmux")
+    let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["set-option", "-gu", "@workmux_sidebar_daemon_pid"])
         .run();
 }

@@ -19,11 +19,8 @@ This will:
 3. Open an editor to review the changelog
 4. Commit, tag, and push
 
-GitHub Actions then builds the release binaries, creates the GitHub release,
-publishes the crate to crates.io, and updates the Homebrew tap. Transient
-crates.io and network failures are retried automatically.
-
-Crates.io publishing requires the `CARGO_REGISTRY_TOKEN` GitHub Actions secret.
+GitHub Actions then builds the release binaries (including a bundled tmux binary)
+and creates the GitHub release with auto-generated release notes.
 
 ## Backfilling changelog
 

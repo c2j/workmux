@@ -727,7 +727,7 @@ impl SidebarApp {
             SidebarLayoutMode::Tiles => SidebarLayoutMode::Compact,
         };
         // Persist to tmux so all sidebar instances pick it up immediately
-        let _ = Cmd::new("tmux")
+        let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
             .args(&[
                 "set-option",
                 "-g",
@@ -759,12 +759,13 @@ impl SidebarApp {
 
         // Read current set from tmux (source of truth) to avoid losing
         // toggles made by other sidebar clients since our last snapshot.
-        let mut current: std::collections::HashSet<String> = Cmd::new("tmux")
-            .args(&["show-option", "-gqv", "@workmux_sleeping_panes"])
-            .run_and_capture_stdout()
-            .ok()
-            .map(|s| s.split_whitespace().map(String::from).collect())
-            .unwrap_or_default();
+        let mut current: std::collections::HashSet<String> =
+            Cmd::new(crate::multiplexer::util::tmux_binary())
+                .args(&["show-option", "-gqv", "@workmux_sleeping_panes"])
+                .run_and_capture_stdout()
+                .ok()
+                .map(|s| s.split_whitespace().map(String::from).collect())
+                .unwrap_or_default();
 
         if !current.insert(pane_id.clone()) {
             current.remove(&pane_id);
@@ -776,11 +777,11 @@ impl SidebarApp {
         // Write back to tmux
         let panes: String = current.into_iter().collect::<Vec<_>>().join(" ");
         if panes.is_empty() {
-            let _ = Cmd::new("tmux")
+            let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
                 .args(&["set-option", "-gu", "@workmux_sleeping_panes"])
                 .run();
         } else {
-            let _ = Cmd::new("tmux")
+            let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
                 .args(&["set-option", "-g", "@workmux_sleeping_panes", &panes])
                 .run();
         }
@@ -792,7 +793,7 @@ impl SidebarApp {
     pub fn toggle_filter_mode(&mut self) {
         self.filter_mode = self.filter_mode.toggle();
         // Persist to tmux so all sidebar instances pick it up immediately
-        if let Err(error) = Cmd::new("tmux")
+        if let Err(error) = Cmd::new(crate::multiplexer::util::tmux_binary())
             .args(&[
                 "set-option",
                 "-g",
@@ -1093,7 +1094,7 @@ fn query_tmux_format_for_current_pane(format: &str) -> Option<String> {
         args.extend_from_slice(&["-t", &pane_id]);
     }
     args.push(format);
-    Cmd::new("tmux")
+    Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&args)
         .run_and_capture_stdout()
         .ok()
@@ -1191,7 +1192,7 @@ fn detect_host_identity() -> Option<HostIdentity> {
     let pane_id = std::env::var("TMUX_PANE")
         .ok()
         .filter(|pane_id| !pane_id.is_empty())?;
-    let output = Cmd::new("tmux")
+    let output = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&[
             "display-message",
             "-p",

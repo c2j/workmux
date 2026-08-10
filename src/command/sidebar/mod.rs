@@ -86,13 +86,13 @@ fn parse_scope(raw: &str, enabled: bool) -> SidebarScope {
 
 /// Read the current sidebar scope from tmux.
 pub(super) fn current_scope() -> SidebarScope {
-    let raw = Cmd::new("tmux")
+    let raw = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["show-option", "-gqv", "@workmux_sidebar_scope"])
         .run_and_capture_stdout()
         .ok()
         .map(|s| s.trim().to_string())
         .unwrap_or_default();
-    let enabled = Cmd::new("tmux")
+    let enabled = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["show-option", "-gqv", "@workmux_sidebar_enabled"])
         .run_and_capture_stdout()
         .ok()
@@ -104,19 +104,19 @@ pub(super) fn current_scope() -> SidebarScope {
 fn set_scope(scope: &SidebarScope) {
     match scope {
         SidebarScope::Off => {
-            let _ = Cmd::new("tmux")
+            let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
                 .args(&["set-option", "-gu", "@workmux_sidebar_scope"])
                 .run();
         }
         SidebarScope::Global => {
-            let _ = Cmd::new("tmux")
+            let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
                 .args(&["set-option", "-g", "@workmux_sidebar_scope", "global"])
                 .run();
         }
         SidebarScope::Sessions(ids) => {
             let val: Vec<&str> = ids.iter().map(|s| s.as_str()).collect();
             let val = val.join(" ");
-            let _ = Cmd::new("tmux")
+            let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
                 .args(&["set-option", "-g", "@workmux_sidebar_scope", &val])
                 .run();
         }
@@ -134,7 +134,7 @@ fn serialize_session_id_set(ids: &std::collections::HashSet<String>) -> String {
 }
 
 fn current_optout_sessions() -> std::collections::HashSet<String> {
-    Cmd::new("tmux")
+    Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["show-option", "-gqv", "@workmux_sidebar_optout_sessions"])
         .run_and_capture_stdout()
         .ok()
@@ -144,12 +144,12 @@ fn current_optout_sessions() -> std::collections::HashSet<String> {
 
 fn set_optout_sessions(ids: &std::collections::HashSet<String>) {
     if ids.is_empty() {
-        let _ = Cmd::new("tmux")
+        let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
             .args(&["set-option", "-gu", "@workmux_sidebar_optout_sessions"])
             .run();
     } else {
         let val = serialize_session_id_set(ids);
-        let _ = Cmd::new("tmux")
+        let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
             .args(&["set-option", "-g", "@workmux_sidebar_optout_sessions", &val])
             .run();
     }
@@ -181,7 +181,7 @@ fn apply_scope_filter(scope: &SidebarScope, window_id: &str) -> bool {
 
 /// Get the current tmux session's stable ID (e.g., "$0").
 fn get_current_session_id() -> Result<String> {
-    let s = Cmd::new("tmux")
+    let s = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["display-message", "-p", "#{session_id}"])
         .run_and_capture_stdout()?
         .trim()
@@ -194,7 +194,7 @@ fn get_current_session_id() -> Result<String> {
 
 /// Get the session_id a window belongs to.
 fn get_window_session_id(window_id: &str) -> Option<String> {
-    Cmd::new("tmux")
+    Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["display-message", "-t", window_id, "-p", "#{session_id}"])
         .run_and_capture_stdout()
         .ok()
@@ -205,7 +205,9 @@ fn get_window_session_id(window_id: &str) -> Option<String> {
 /// Unset all sidebar global tmux options.
 fn clear_sidebar_globals() {
     for opt in SIDEBAR_GLOBAL_OPTIONS {
-        let _ = Cmd::new("tmux").args(&["set-option", "-gu", opt]).run();
+        let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
+            .args(&["set-option", "-gu", opt])
+            .run();
     }
 }
 
@@ -217,7 +219,7 @@ fn configured_position(
 }
 
 pub(super) fn read_sidebar_position(config: &crate::config::Config) -> SidebarPosition {
-    if let Ok(output) = Cmd::new("tmux")
+    if let Ok(output) = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["show-option", "-gqv", "@workmux_sidebar_position"])
         .run_and_capture_stdout()
     {
@@ -236,7 +238,7 @@ fn set_sidebar_position(position: SidebarPosition) {
         SidebarPosition::Left => "left",
         SidebarPosition::Top => "top",
     };
-    let _ = Cmd::new("tmux")
+    let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["set-option", "-g", "@workmux_sidebar_position", value])
         .run();
 }
@@ -295,7 +297,7 @@ fn resolve_height_for(config: &crate::config::Config, th: u16, synced_height: Op
 
 /// Read the synced sidebar width from tmux global option, falling back to settings.
 fn read_sidebar_width() -> Option<u16> {
-    if let Ok(output) = Cmd::new("tmux")
+    if let Ok(output) = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["show-option", "-gqv", "@workmux_sidebar_width"])
         .run_and_capture_stdout()
         && let Ok(w) = output.trim().parse::<u16>()
@@ -314,7 +316,7 @@ fn read_sidebar_width() -> Option<u16> {
 }
 
 fn read_sidebar_height() -> Option<u16> {
-    if let Ok(output) = Cmd::new("tmux")
+    if let Ok(output) = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["show-option", "-gqv", "@workmux_sidebar_height"])
         .run_and_capture_stdout()
         && let Ok(h) = output.trim().parse::<u16>()
@@ -334,7 +336,7 @@ fn read_sidebar_height() -> Option<u16> {
 
 /// Set the synced sidebar width in tmux global option and persist to settings.
 fn set_sidebar_width(width: u16) {
-    let _ = Cmd::new("tmux")
+    let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&[
             "set-option",
             "-g",
@@ -352,7 +354,7 @@ fn set_sidebar_width(width: u16) {
 }
 
 fn set_sidebar_height(height: u16) {
-    let _ = Cmd::new("tmux")
+    let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&[
             "set-option",
             "-g",
@@ -406,7 +408,7 @@ pub(super) fn reflow_all_sidebars_except(exclude_window_id: &str) {
             SidebarPosition::Left => "#{window_width}",
             SidebarPosition::Top => "#{window_height}",
         };
-        let window_extent: u16 = Cmd::new("tmux")
+        let window_extent: u16 = Cmd::new(crate::multiplexer::util::tmux_binary())
             .args(&["display-message", "-t", &window_id, "-p", format])
             .run_and_capture_stdout()
             .ok()
@@ -459,7 +461,7 @@ pub(super) fn reflow_all_to_window_extent(
         };
         let current_extent = match window_extent {
             Some(extent) => extent,
-            None => Cmd::new("tmux")
+            None => Cmd::new(crate::multiplexer::util::tmux_binary())
                 .args(&["display-message", "-t", &window_id, "-p", format])
                 .run_and_capture_stdout()
                 .ok()
@@ -503,7 +505,7 @@ pub fn toggle(position: Option<SidebarPosition>) -> Result<()> {
     }
 
     // Determine intent based on the current window's state
-    let current_window = Cmd::new("tmux")
+    let current_window = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["display-message", "-p", "#{window_id}"])
         .run_and_capture_stdout()?
         .trim()
@@ -524,7 +526,7 @@ pub fn toggle(position: Option<SidebarPosition>) -> Result<()> {
     let _ = std::thread::spawn(crate::tips::mark_sidebar_used);
 
     // Current window missing sidebar → enable/repair globally
-    Cmd::new("tmux")
+    Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["set-option", "-g", "@workmux_sidebar_enabled", "1"])
         .run()?;
     let position = configured_position(&config, position);
@@ -564,7 +566,7 @@ pub fn toggle_session(position: Option<SidebarPosition>) -> Result<()> {
         return Ok(());
     }
 
-    let current_window = Cmd::new("tmux")
+    let current_window = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["display-message", "-p", "#{window_id}"])
         .run_and_capture_stdout()?
         .trim()
@@ -594,7 +596,7 @@ pub fn toggle_session(position: Option<SidebarPosition>) -> Result<()> {
     // Toggle ON for this session
     let _ = std::thread::spawn(crate::tips::mark_sidebar_used);
 
-    Cmd::new("tmux")
+    Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["set-option", "-g", "@workmux_sidebar_enabled", "1"])
         .run()?;
     let position = configured_position(&config, position);
@@ -628,7 +630,7 @@ fn get_sidebar_position_and_size(target: &str) -> Result<(SidebarPosition, u16)>
         SidebarPosition::Left => "#{window_width}",
         SidebarPosition::Top => "#{window_height}",
     };
-    let window_extent: u16 = Cmd::new("tmux")
+    let window_extent: u16 = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["display-message", "-t", target, "-p", format])
         .run_and_capture_stdout()
         .ok()
@@ -642,7 +644,7 @@ fn get_sidebar_position_and_size(target: &str) -> Result<(SidebarPosition, u16)>
 fn resolve_target_window(window_id: Option<&str>) -> Result<String> {
     match window_id {
         Some(id) => Ok(id.to_string()),
-        None => Ok(Cmd::new("tmux")
+        None => Ok(Cmd::new(crate::multiplexer::util::tmux_binary())
             .args(&["display-message", "-p", "#{window_id}"])
             .run_and_capture_stdout()?
             .trim()
@@ -702,7 +704,7 @@ pub fn reflow(window_id: Option<&str>) -> Result<()> {
     }
 
     // Find the sidebar pane ID in this window
-    let output = Cmd::new("tmux")
+    let output = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&[
             "list-panes",
             "-t",
@@ -774,7 +776,7 @@ fn compute_nav_target(action: &NavAction, current_idx: Option<usize>, len: usize
 }
 
 fn pane_window_ids() -> std::collections::HashMap<String, String> {
-    Cmd::new("tmux")
+    Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["list-panes", "-a", "-F", "#{pane_id}\t#{window_id}"])
         .run_and_capture_stdout()
         .ok()
@@ -791,7 +793,7 @@ fn pane_window_ids() -> std::collections::HashMap<String, String> {
 }
 
 fn pane_session_ids() -> std::collections::HashMap<String, String> {
-    Cmd::new("tmux")
+    Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["list-panes", "-a", "-F", "#{pane_id}\t#{session_name}"])
         .run_and_capture_stdout()
         .ok()
@@ -816,7 +818,7 @@ fn parse_sidebar_filter_mode(raw: &str) -> Result<app::SidebarFilterMode> {
 }
 
 fn read_sidebar_filter_mode() -> app::SidebarFilterMode {
-    if let Ok(output) = Cmd::new("tmux")
+    if let Ok(output) = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["show-option", "-gqv", "@workmux_sidebar_filter"])
         .run_and_capture_stdout()
     {
@@ -871,7 +873,7 @@ pub fn navigate(action: NavAction) -> Result<()> {
         return Err(anyhow!("Sidebar requires tmux"));
     }
 
-    let agents_str = Cmd::new("tmux")
+    let agents_str = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["show-option", "-gqv", "@workmux_sidebar_agents"])
         .run_and_capture_stdout()
         .unwrap_or_default();
@@ -889,19 +891,19 @@ pub fn navigate(action: NavAction) -> Result<()> {
     }
 
     // Find current pane/window context
-    let current_pane_id = Cmd::new("tmux")
+    let current_pane_id = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["display-message", "-p", "#{pane_id}"])
         .run_and_capture_stdout()
         .unwrap_or_default();
     let current_pane_id = current_pane_id.trim();
-    let current_window_id = Cmd::new("tmux")
+    let current_window_id = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["display-message", "-p", "#{window_id}"])
         .run_and_capture_stdout()
         .unwrap_or_default();
     let current_window_id = current_window_id.trim();
     let pane_window_ids = pane_window_ids();
     let pane_session_ids = pane_session_ids();
-    let current_session = Cmd::new("tmux")
+    let current_session = Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["display-message", "-p", "#{session_name}"])
         .run_and_capture_stdout()
         .unwrap_or_default();
@@ -934,7 +936,7 @@ pub fn navigate(action: NavAction) -> Result<()> {
     };
 
     let target_pane = panes[target_idx];
-    Cmd::new("tmux")
+    Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["switch-client", "-t", target_pane])
         .run()?;
 
@@ -950,7 +952,7 @@ pub fn set_filter_mode(mode: Option<&str>) -> Result<()> {
     };
 
     // Write to tmux global
-    Cmd::new("tmux")
+    Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&[
             "set-option",
             "-g",
