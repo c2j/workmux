@@ -246,7 +246,9 @@ fn pane_kill_command(pane_id: &str) -> String {
 
 fn schedule_pane_kill(pane_id: &str) {
     let cmd = pane_kill_command(pane_id);
-    let _ = Cmd::new("tmux").args(&["run-shell", "-b", &cmd]).run();
+    let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
+        .args(&["run-shell", "-b", &cmd])
+        .run();
 }
 
 fn sole_pane_is_sidebar(output: &str, pane_id: &str) -> bool {
@@ -258,7 +260,7 @@ fn sole_pane_is_sidebar(output: &str, pane_id: &str) -> bool {
 }
 
 fn sidebar_is_only_pane(window_id: &str, pane_id: &str) -> bool {
-    Cmd::new("tmux")
+    Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["list-panes", "-t", window_id, "-F", "#{pane_id}"])
         .run_and_capture_stdout()
         .is_ok_and(|output| sole_pane_is_sidebar(&output, pane_id))

@@ -217,6 +217,15 @@ fn do_update(
 
     replace_binary(&new_binary, current_exe)?;
 
+    // Also update the bundled tmux binary if present in the release
+    let new_tmux = extract_dir.join("tmux");
+    if new_tmux.exists() {
+        if let Some(parent) = current_exe.parent() {
+            let tmux_dest = parent.join("tmux");
+            replace_binary(&new_tmux, &tmux_dest)?;
+        }
+    }
+
     Ok(format!(
         "Updated workmux v{CURRENT_VERSION} -> v{latest_version}"
     ))

@@ -3109,7 +3109,7 @@ pub fn resolve_executable_path(executable: &str) -> Option<String> {
 }
 
 pub fn tmux_global_path() -> Option<String> {
-    let output = cmd::Cmd::new("tmux")
+    let output = cmd::Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["show-environment", "-g", "PATH"])
         .run_and_capture_stdout()
         .ok()?;

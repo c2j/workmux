@@ -69,7 +69,7 @@ impl TmuxHandshake {
         let channel = format!("wm_ready_{}_{}", pid, nanos);
 
         // Lock the channel (ensures we don't miss the signal)
-        Cmd::new("tmux")
+        Cmd::new(crate::multiplexer::util::tmux_binary())
             .args(&["wait-for", "-L", &channel])
             .run()
             .context("Failed to initialize wait channel")?;
@@ -111,7 +111,7 @@ impl PaneHandshake for TmuxHandshake {
     fn wait(self: Box<Self>) -> Result<()> {
         debug!(channel = %self.channel, "tmux:handshake start");
 
-        let mut child = std::process::Command::new("tmux")
+        let mut child = std::process::Command::new(crate::multiplexer::util::tmux_binary())
             .args(["wait-for", "-L", &self.channel])
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
@@ -126,7 +126,7 @@ impl PaneHandshake for TmuxHandshake {
                 Ok(Some(status)) => {
                     if status.success() {
                         // Cleanup: unlock the channel we just re-locked
-                        Cmd::new("tmux")
+                        Cmd::new(crate::multiplexer::util::tmux_binary())
                             .args(&["wait-for", "-U", &self.channel])
                             .run()
                             .context("Failed to cleanup wait channel")?;
@@ -134,7 +134,7 @@ impl PaneHandshake for TmuxHandshake {
                         return Ok(());
                     } else {
                         // Attempt cleanup even on failure
-                        let _ = Cmd::new("tmux")
+                        let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
                             .args(&["wait-for", "-U", &self.channel])
                             .run();
                         warn!(channel = %self.channel, status = ?status.code(), "tmux:handshake failed (wait-for error)");
@@ -149,7 +149,7 @@ impl PaneHandshake for TmuxHandshake {
                         let _ = child.wait(); // Ensure process is reaped
 
                         // Attempt cleanup
-                        let _ = Cmd::new("tmux")
+                        let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
                             .args(&["wait-for", "-U", &self.channel])
                             .run();
 
@@ -173,7 +173,7 @@ impl PaneHandshake for TmuxHandshake {
                 Err(e) => {
                     let _ = child.kill();
                     let _ = child.wait();
-                    let _ = Cmd::new("tmux")
+                    let _ = Cmd::new(crate::multiplexer::util::tmux_binary())
                         .args(&["wait-for", "-U", &self.channel])
                         .run();
                     warn!(channel = %self.channel, error = %e, "tmux:handshake error");

@@ -505,7 +505,7 @@ fn handle_set_title(title: &str, ctx: &RpcContext) -> RpcResponse {
     // Use tmux rename-window via the Cmd helper (consistent with codebase patterns)
     use crate::cmd::Cmd;
 
-    match Cmd::new("tmux")
+    match Cmd::new(crate::multiplexer::util::tmux_binary())
         .args(&["rename-window", "-t", &ctx.pane_id, title])
         .run()
     {
